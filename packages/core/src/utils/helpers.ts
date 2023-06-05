@@ -27,4 +27,8 @@ export function notNull<T>(value: T | null | undefined): value is T {
   return value != null
 }
 
+export function isTruly<T>(value: T | null | undefined | false): value is T {
+  return Boolean(value)
+}
+
 export function noop() {}

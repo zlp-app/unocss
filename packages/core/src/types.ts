@@ -421,7 +421,7 @@ export interface ConfigBase<Theme extends {} = {}> {
   /**
    * Presets
    */
-  presets?: (Preset<Theme> | Preset<Theme>[])[]
+  presets?: UnresolvedPresets<Theme>
 
   /**
    * Additional options for auto complete
@@ -531,6 +531,8 @@ export interface Preset<Theme extends {} = {}> extends ConfigBase<Theme> {
    */
   layer?: string
 }
+
+export type UnresolvedPresets<Theme extends {} = {}> = Arrayable<Awaitable<Arrayable<Preset<Theme> | null | undefined | false>>>
 
 export interface GeneratorOptions {
   /**

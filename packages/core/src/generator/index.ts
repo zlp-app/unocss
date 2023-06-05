@@ -8,7 +8,8 @@ import { LAYER_DEFAULT, LAYER_PREFLIGHTS } from '../constants'
 export class UnoGenerator<Theme extends {} = {}> {
   public version = version
   private _cache = new Map<string, StringifiedUtil<Theme>[] | null>()
-  public config: ResolvedConfig<Theme>
+  private _configPromise?: Promise<ResolvedConfig<Theme>>
+  public config: ResolvedConfig<Theme> | undefined
   public blocked = new Set<string>()
   public parentOrders = new Map<string, number>()
   public events = createNanoEvents<{
@@ -19,11 +20,19 @@ export class UnoGenerator<Theme extends {} = {}> {
     public userConfig: UserConfig<Theme> = {},
     public defaults: UserConfigDefaults<Theme> = {},
   ) {
-    this.config = resolveConfig(userConfig, defaults)
-    this.events.emit('config', this.config)
+    this._configPromise = resolveConfig(userConfig, defaults)
+      .then((config) => {
+        this.config = config
+        this.events.emit('config', this.config)
+        return config
+      })
   }
 
-  setConfig(userConfig?: UserConfig<Theme>, defaults?: UserConfigDefaults<Theme>) {
+  async getConfig() {
+    return await this._configPromise
+  }
+
+  async setConfig(userConfig?: UserConfig<Theme>, defaults?: UserConfigDefaults<Theme>) {
     if (!userConfig)
       return
     if (defaults)
@@ -32,8 +41,15 @@ export class UnoGenerator<Theme extends {} = {}> {
     this.blocked.clear()
     this.parentOrders.clear()
     this._cache.clear()
-    this.config = resolveConfig(userConfig, this.defaults)
-    this.events.emit('config', this.config)
+
+    this._configPromise = resolveConfig(userConfig, defaults)
+      .then((config) => {
+        this.config = config
+        this.events.emit('config', this.config)
+        return config
+      })
+
+    await this._configPromise
   }
 
   async applyExtractors(code: string, id?: string, extracted = new Set<string>()) {

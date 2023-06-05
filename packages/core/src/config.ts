@@ -1,5 +1,5 @@
-import type { Preset, ResolvedConfig, Rule, Shortcut, ToArray, UserConfig, UserConfigDefaults, UserShortcuts } from './types'
-import { clone, isStaticRule, mergeDeep, normalizeVariant, toArray, uniq } from './utils'
+import type { Preset, ResolvedConfig, Rule, Shortcut, ToArray, UnresolvedPresets, UserConfig, UserConfigDefaults, UserShortcuts } from './types'
+import { clone, isStaticRule, isTruly, mergeDeep, normalizeVariant, toArray, uniq } from './utils'
 import { extractorSplit } from './extractors'
 import { DEFAULT_LAYERS } from './constants'
 
@@ -51,20 +51,28 @@ export function resolvePreset<Theme extends {} = {}>(preset: Preset<Theme>): Pre
 /**
  * Resolve presets with nested presets
  */
-export function resolvePresets<Theme extends {} = {}>(preset: Preset<Theme>): Preset<Theme>[] {
-  const root = resolvePreset(preset)
-  if (!root.presets)
-    return [root]
-  const nested = (root.presets || []).flatMap(toArray).flatMap(resolvePresets)
-  return [root, ...nested]
+export async function resolvePresets<Theme extends {} = {}>(presets: UnresolvedPresets<Theme>): Promise<Preset<Theme>[]> {
+  const resolved = (await Promise.all(toArray(presets)))
+    .flatMap(i => toArray(i || []))
+    .filter(isTruly)
+
+  const result = await Promise.all(resolved.map(async (r) => {
+    const root = resolvePreset(r)
+    if (!root.presets)
+      return [root]
+    const nested = await resolvePresets(r.presets)
+    return [root, ...nested]
+  }))
+
+  return result.flat()
 }
 
-export function resolveConfig<Theme extends {} = {}>(
+export async function resolveConfig<Theme extends {} = {}>(
   userConfig: UserConfig<Theme> = {},
   defaults: UserConfigDefaults<Theme> = {},
-): ResolvedConfig<Theme> {
+): Promise<ResolvedConfig<Theme>> {
   const config = Object.assign({}, defaults, userConfig) as UserConfigDefaults<Theme>
-  const rawPresets = uniq((config.presets || []).flatMap(toArray).flatMap(resolvePresets))
+  const rawPresets = uniq(await resolvePresets(config.presets))
 
   const sortedPresets = [
     ...rawPresets.filter(p => p.enforce === 'pre'),
