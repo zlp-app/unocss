@@ -15,7 +15,7 @@ autocomplete: {
     'w-half',
   ],
   shorthands: {
-    // equal to `opacity: "(0|10|20|30|40|50|60|70|90|100)"`
+    // equal to `opacity: "(0|10|20|30|40|50|60|70|80|90|100)"`
     'opacity': Array.from({ length: 11 }, (_, i) => i * 10),
     'font-size': '(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)',
     // override built-in short hands
